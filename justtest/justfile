@@ -1,0 +1,11 @@
+
+@run:
+    #!/bin/bash
+    echo test
+
+[working-directory: 'testdir']
+@run_from_somewhere:
+    #!/bin/bash
+    cat abcfile
+
+
