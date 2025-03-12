@@ -1,6 +1,7 @@
 use core::f64;
 
 use serde::{Deserialize, Serialize};
+use serde_reflection::{ContainerFormat, Format, Registry, Samples, Tracer, TracerConfig};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 struct Test {
@@ -50,9 +51,166 @@ struct SomeSingleFloat {
 }
 
 fn main() {
-    println!("Hello, world!");
+    let mut tracer = Tracer::new(TracerConfig::default());
+    tracer.trace_type::<Test>(&Samples::default()).unwrap();
+    let registry = tracer.registry().unwrap();
+    let str = serde_json::to_string(&registry).unwrap();
+    println!("\n###### SERDE_REFLECTION: \n");
+    println!("{}", str);
+    let proto = generate_protobuf(&registry);
+    println!("\n###### PROTOBUF: \n");
+    println!("{}", proto);
+    let ros2_msg = generate_ros2_msg(&registry);
+    println!("\n###### ROS2 MSG: \n");
+    println!("{}", ros2_msg);
+    println!("\n###### THRIFT: \n");
+    let thrift = generate_thrift(&registry);
+    println!("{}", thrift);
+    println!("\n###### FLATBUFFERS: \n");
+    let flatbuffers = generate_flatbuffers(&registry);
+    println!("{}", flatbuffers);
 }
 
+fn generate_thrift(registry: &Registry) -> String {
+    let mut thrift_def = String::new();
+
+    for (name, container) in registry {
+        if let ContainerFormat::Struct(struct_format) = container {
+            thrift_def.push_str(&format!("struct {} {{\n", name));
+
+            let mut field_index = 1;
+            for t in struct_format {
+                let field_name = t.name.clone();
+                let field_type_str = match t.value {
+                    Format::U8 | Format::U16 | Format::U32 => "i32",
+                    Format::I8 | Format::I16 | Format::I32 => "i32",
+                    Format::I64 => "i64",
+                    Format::U64 => "i64", // Thrift does not have a uint64, using i64
+                    Format::F32 => "float",
+                    Format::F64 => "double",
+                    Format::Bool => "bool",
+                    Format::Str => "string",
+                    _ => "binary", // Default to binary for unknown/complex types
+                };
+
+                thrift_def.push_str(&format!(
+                    "  {} {} = {};\n",
+                    field_type_str, field_name, field_index
+                ));
+                field_index += 1;
+            }
+            thrift_def.push_str("}\n\n");
+        }
+    }
+
+    thrift_def
+}
+
+fn generate_flatbuffers(registry: &Registry) -> String {
+    let mut flatbuffers_def = String::new();
+
+    for (name, container) in registry {
+        if let ContainerFormat::Struct(struct_format) = container {
+            flatbuffers_def.push_str(&format!("table {} {{\n", name));
+
+            for t in struct_format {
+                let field_name = t.name.clone();
+                let field_type_str = match t.value {
+                    Format::U8 | Format::U16 | Format::U32 => "int",
+                    Format::I8 | Format::I16 | Format::I32 => "int",
+                    Format::I64 => "long",
+                    Format::U64 => "ulong", // FlatBuffers uses unsigned long for 64-bit unsigned
+                    Format::F32 => "float",
+                    Format::F64 => "double",
+                    Format::Bool => "bool",
+                    Format::Str => "string",
+                    _ => "ubyte", // Default to ubyte for unknown/complex types
+                };
+
+                flatbuffers_def.push_str(&format!("  {}: {};\n", field_name, field_type_str));
+            }
+
+            flatbuffers_def.push_str("}\n\n");
+            flatbuffers_def.push_str(&("\nroot_type ".to_owned() + name + ";\n"));
+        }
+    }
+
+    flatbuffers_def
+}
+
+fn generate_protobuf(registry: &Registry) -> String {
+    let mut proto_def = String::new();
+    proto_def.push_str("syntax = \"proto3\";\n\n");
+
+    for (name, container) in registry {
+        if let ContainerFormat::Struct(struct_format) = container {
+            proto_def.push_str(&format!("message {} {{\n", name));
+
+            let mut field_index = 1;
+            for t in struct_format {
+                let field_name = t.name.clone();
+                let field_type_str = match t.value {
+                    serde_reflection::Format::U8
+                    | serde_reflection::Format::U16
+                    | serde_reflection::Format::U32 => "uint32",
+                    serde_reflection::Format::I8
+                    | serde_reflection::Format::I16
+                    | serde_reflection::Format::I32 => "int32",
+                    serde_reflection::Format::I64 => "int64",
+                    serde_reflection::Format::U64 => "uint64",
+                    serde_reflection::Format::F32 => "float",
+                    serde_reflection::Format::F64 => "double",
+                    serde_reflection::Format::Bool => "bool",
+                    serde_reflection::Format::Str => "string",
+                    _ => "bytes", // Default to bytes for unknown/complex types
+                };
+
+                proto_def.push_str(&format!(
+                    "  {} {} = {};\n",
+                    field_type_str, field_name, field_index
+                ));
+                field_index += 1;
+            }
+            proto_def.push_str("}\n\n");
+        }
+    }
+    proto_def
+}
+fn rust_to_ros_type(format: &Format) -> String {
+    match format {
+        Format::Bool => "bool".to_string(),
+        Format::I8 => "int8".to_string(),
+        Format::I16 => "int16".to_string(),
+        Format::I32 => "int32".to_string(),
+        Format::I64 => "int64".to_string(),
+        Format::U8 => "uint8".to_string(),
+        Format::U16 => "uint16".to_string(),
+        Format::U32 => "uint32".to_string(),
+        Format::U64 => "uint64".to_string(),
+        Format::F32 => "float32".to_string(),
+        Format::F64 => "float64".to_string(),
+        Format::Str => "string".to_string(),
+        Format::Seq(inner) => format!("{}[]", rust_to_ros_type(inner)), // Convert Vec<T> to T[]
+        _ => "UNKNOWN_TYPE".to_string(),
+    }
+}
+
+fn generate_ros2_msg(registry: &Registry) -> String {
+    let mut msg_def = String::new();
+
+    for (_name, container) in registry {
+        if let ContainerFormat::Struct(struct_format) = container {
+            for t in struct_format {
+                let field_name = t.name.clone();
+                let field_type = &t.value;
+                let ros_type = rust_to_ros_type(field_type);
+                msg_def.push_str(&format!("{} {}\n", ros_type, field_name));
+            }
+        }
+    }
+
+    msg_def
+}
 #[cfg(test)]
 mod test {
     use std::f32;
