@@ -1,0 +1,11 @@
+@init:
+    terraform init
+
+@dry-run:
+    terraform plan -var="do_token=$DO_TOKEN"
+
+@deploy:
+    terraform apply -var="do_token=$DO_TOKEN" -auto-approve
+
+@destroy:
+    terraform destroy -var="do_token=$DO_TOKEN" -auto-approve
