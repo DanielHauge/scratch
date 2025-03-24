@@ -1,2 +1,0 @@
-@compile_c_lib:
-    gcc -shared -o add.so -fPIC add.c

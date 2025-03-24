@@ -1,0 +1,10 @@
+@compile_cadd_lib_so:
+    gcc -shared -o libadd.so -fPIC add.c
+
+@compile_csub_lib_a:
+    # Compile a achive library for static linking
+    gcc -c sub.c -o sub.o
+    ar rcs libsub.a sub.o
+
+
+
