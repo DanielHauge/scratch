@@ -1,0 +1,9 @@
+namespace Data;
+
+table Data {
+    id: int;
+    name: string;
+}
+
+root_type Data;
+
