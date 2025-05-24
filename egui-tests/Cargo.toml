@@ -1,0 +1,13 @@
+[package]
+name = "egui-tests"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.31.1"
+egui = "0.31.1"
+egui_plot = "0.31.0"
+env_logger = { version = "0.11.8", features = ["auto-color", "humantime"] }
+image = "0.25.6"
+itertools = "0.14.0"
+rfd = "0.15.3"
