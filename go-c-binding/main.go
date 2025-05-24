@@ -16,8 +16,11 @@ func main() {
 
 	println("Addition is dynamically linked, as a .so, Must be included the LD_LIBRARY_PATH") // Call the function
 	println("Addition: ", add(a, b))                                                          // Call the function
+	println("Test:", add(a, b))
+	add(2, 5)
 }
 
+// Some cool stuff man
 func add(a, b int) int {
 	res := C.add(C.int(a), C.int(b))
 	return int(res)
