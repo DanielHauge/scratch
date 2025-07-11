@@ -1,0 +1,12 @@
+[package]
+name = "rustapi"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-stream = "0.3.2"
+futures-util = "0.3.31"
+poem = "3.1.11"
+poem-openapi = { version = "5.1.15", features = ["swagger-ui"] }
+tokio = { version = "1.46.1", features = ["macros", "rt-multi-thread", "time"] }
+tracing-subscriber = "0.3.19"
