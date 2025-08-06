@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Sensor Data</title>
+  <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.17/dist/uPlot.iife.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/uplot@1.6.17/dist/uPlot.min.css" rel="stylesheet">
+  <style>
+    #chart { width: 100%; height: 400px; }
+  </style>
+</head>
+<body>
+  <h2>Live Sensor</h2>
+  <div id="chart"></div>
+
+  <div id="chart2"></div>
+  <div id="chart3"></div>
+  <div id="chart4"></div>
+  <div id="chart5"></div>
+  <div id="chart6"></div>
+  <div id="chart7"></div>
+  <div id="chart8"></div>
+  <div id="chart9"></div>
+  <div id="chart10"></div>
+  <div id="chart11"></div>
+  <div id="chart12"></div>
+  <script>
+    const charts = [];
+    for (let i = 1; i <= 12; i++) {
+      const socket = new WebSocket("ws://" + location.host + "/ws" );
+      const data = [[], []];
+      const opts = {
+        title: "Sensor " + i,
+        width: 800,
+        height: 400,
+        series: [
+          { label: "Time" },
+          { label: "Value", stroke: "blue", width: 2 },
+        ],
+      };
+      const chart = new uPlot(opts, data, document.getElementById("chart" + i));
+      charts.push(chart);
+
+      socket.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        data[0].push(msg.timestamp / 1000);
+        data[1].push(msg.value);
+        if (data[0].length > 200) {
+          data[0].shift();
+          data[1].shift();
+        }
+        chart.setData(data);
+      };
+    }
+  </script>
+</body>
+</html>
