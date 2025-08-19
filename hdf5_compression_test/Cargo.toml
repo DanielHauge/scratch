@@ -1,0 +1,7 @@
+[package]
+name = "hdf5_compression_test"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hdf5-metno = { version = "0.10.1", features = ["blosc-all", "lzf", "zlib"] }
