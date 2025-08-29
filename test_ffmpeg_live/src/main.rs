@@ -15,8 +15,15 @@ fn main() -> std::io::Result<()> {
 
     frames.sort();
 
-    // Start ffmpeg process
-    // We're streaming JPEGs via image2pipe
+    eprintln!("Found {} frames", frames.len());
+    let mut loaded_frames = vec![];
+    for frame in frames {
+        let data = fs::read(&frame)?;
+        loaded_frames.push(data);
+    }
+
+    eprintln!("Loaded {} frames into memory", loaded_frames.len());
+    eprintln!("Starting ffmpeg...");
     let mut child = Command::new("ffmpeg")
         .args([
             "-y",
@@ -53,8 +60,9 @@ fn main() -> std::io::Result<()> {
     let stdin = child.stdin.as_mut().expect("failed to open stdin");
 
     // Stream frames to ffmpeg
-    for frame in frames {
-        let data = fs::read(&frame)?;
+
+    eprintln!("Streaming frames to ffmpeg...");
+    for data in loaded_frames {
         stdin.write_all(&data)?;
         stdin.flush()?;
     }
